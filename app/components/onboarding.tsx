@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 interface OnboardingProps {
   onError: (message: string) => void;
-  onSuccess: () => void;
+  onSuccess: (mode: 'login' | 'register') => void;
   error?: string;
 }
 
@@ -40,7 +40,7 @@ export default function Onboarding({ onError, onSuccess, error }: OnboardingProp
     setLoading(mode);
     onError('');
     setTimeout(() => {
-      onSuccess();
+      onSuccess(mode);
     }, 700);
   }
 

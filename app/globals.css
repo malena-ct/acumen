@@ -151,6 +151,11 @@ h2 {
   font-size: 16px;
 }
 
+.success {
+  color: #059669;
+  font-weight: 700;
+}
+
 .error {
   color: var(--danger);
   font-size: 13px;

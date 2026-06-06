@@ -16,6 +16,12 @@ interface ListResponse {
   nextPageToken: string | null;
 }
 
+interface AcumenStatus {
+  authenticated: boolean;
+  folderReady: boolean;
+  folderId?: string;
+}
+
 async function jsonFetch<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   const res = await fetch(input, init);
   const text = await res.text();
@@ -43,6 +49,7 @@ function formatBytes(raw: string | null | undefined): string {
 export default function HomePage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [acumenStatus, setAcumenStatus] = useState<AcumenStatus | null>(null);
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [query, setQuery] = useState('');
   const [loadingFiles, setLoadingFiles] = useState(false);
@@ -53,7 +60,8 @@ export default function HomePage() {
 
   const refreshAuth = useCallback(async () => {
     try {
-      const data = await jsonFetch<{ authenticated: boolean }>('/api/auth/status');
+      const data = await jsonFetch<AcumenStatus>('/api/acumen/status');
+      setAcumenStatus(data);
       setAuthenticated(data.authenticated);
     } catch (err) {
       setError((err as Error).message);
@@ -100,6 +108,7 @@ export default function HomePage() {
     try {
       await jsonFetch('/api/auth/logout', { method: 'POST' });
       setAuthenticated(false);
+      setAcumenStatus({ authenticated: false, folderReady: false });
       setFiles([]);
     } catch (err) {
       setError((err as Error).message);
@@ -164,7 +173,7 @@ export default function HomePage() {
       <header className="row" style={{ justifyContent: 'space-between' }}>
         <div>
           <h1>halketon</h1>
-          <div className="muted">Google Drive OAuth playground</div>
+          <div className="muted">Google Drive OAuth playground · ACUMEN folder only</div>
         </div>
         <div className="row">
           {authenticated ? (
@@ -187,14 +196,28 @@ export default function HomePage() {
         <section className="section card">
           <h2>Not signed in</h2>
           <p className="muted">
-            Click <strong>Sign in with Google</strong> to grant access to the Drive
-            scopes configured on the server.
+            Click <strong>Sign in with Google</strong> to grant access. On first sign-in,
+            halketon creates a root-level <strong>ACUMEN</strong> folder if needed and only
+            uses files inside that folder.
           </p>
         </section>
       ) : (
         <>
           <section className="section card">
-            <h2>Upload</h2>
+            <h2>ACUMEN folder</h2>
+            <p className="muted">
+              This app only uses files in your root <strong>ACUMEN</strong> Google Drive folder.
+              Uploads go there automatically, and the file list below is scoped to that folder.
+            </p>
+            <div className={acumenStatus?.folderReady ? 'success' : 'muted'}>
+              {acumenStatus?.folderReady
+                ? `Ready${acumenStatus.folderId ? ` · ${acumenStatus.folderId}` : ''}`
+                : 'Preparing ACUMEN folder… refresh if this does not update shortly.'}
+            </div>
+          </section>
+
+          <section className="section card">
+            <h2>Upload to ACUMEN</h2>
             <form onSubmit={handleUpload} className="row">
               <input
                 id="upload-input"

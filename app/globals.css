@@ -413,6 +413,7 @@ button.block {
 .step-body h3 {
   margin: 0 0 4px 0;
   font-size: 17px;
+  color: var(--fg);
 }
 
 .step-body p {

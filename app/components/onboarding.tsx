@@ -4,17 +4,8 @@ import { useState } from 'react';
 
 interface OnboardingProps {
   onError: (message: string) => void;
+  onSuccess: () => void;
   error?: string;
-}
-
-async function getGoogleUrl(): Promise<string> {
-  const res = await fetch('/api/auth/google?redirect=0');
-  const text = await res.text();
-  const body = text ? JSON.parse(text) : {};
-  if (!res.ok) {
-    throw new Error(body?.error ?? 'No pudimos conectar con Google. Intenta de nuevo.');
-  }
-  return body.url as string;
 }
 
 function GoogleIcon() {
@@ -40,19 +31,17 @@ function GoogleIcon() {
   );
 }
 
-export default function Onboarding({ onError, error }: OnboardingProps) {
+export default function Onboarding({ onError, onSuccess, error }: OnboardingProps) {
   const [loading, setLoading] = useState<'login' | 'register' | null>(null);
 
-  async function handleGoogle(mode: 'login' | 'register') {
+  // Mock auth: simulate a successful sign-in/registration.
+  // Replace this with the real Google flow when ready.
+  function handleGoogle(mode: 'login' | 'register') {
     setLoading(mode);
     onError('');
-    try {
-      const url = await getGoogleUrl();
-      window.location.href = url;
-    } catch (err) {
-      onError((err as Error).message);
-      setLoading(null);
-    }
+    setTimeout(() => {
+      onSuccess();
+    }, 700);
   }
 
   return (

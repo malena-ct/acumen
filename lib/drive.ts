@@ -7,9 +7,33 @@ export const DEFAULT_FILE_FIELDS =
 export const ACUMEN_FOLDER_NAME = 'ACUMEN';
 export const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
+export interface AcumenFolder {
+  id: string;
+  name?: string | null;
+}
+
 /** Escape a string for safe use inside a Drive v3 query literal. */
 export function escapeDriveQueryValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+/**
+ * Find every root-level, non-trashed ACUMEN folder visible to this OAuth grant.
+ * Multiple folders can exist if an earlier drive.file grant created an app-owned
+ * ACUMEN folder while a user-created ACUMEN folder was invisible to the app.
+ */
+export async function findAcumenFolders(drive: drive_v3.Drive): Promise<AcumenFolder[]> {
+  const name = escapeDriveQueryValue(ACUMEN_FOLDER_NAME);
+  const q = `name = '${name}' and mimeType = '${FOLDER_MIME_TYPE}' and 'root' in parents and trashed = false`;
+  const result = await drive.files.list({
+    q,
+    fields: 'files(id, name)',
+    pageSize: 100,
+    spaces: 'drive',
+  });
+  return (result.data.files ?? [])
+    .filter((file): file is drive_v3.Schema$File & { id: string } => !!file.id)
+    .map((file) => ({ id: file.id, name: file.name }));
 }
 
 /**
@@ -17,16 +41,7 @@ export function escapeDriveQueryValue(value: string): string {
  * Returns the folder id, or null if it does not exist.
  */
 export async function findAcumenFolder(drive: drive_v3.Drive): Promise<string | null> {
-  const name = escapeDriveQueryValue(ACUMEN_FOLDER_NAME);
-  const q = `name = '${name}' and mimeType = '${FOLDER_MIME_TYPE}' and 'root' in parents and trashed = false`;
-  const result = await drive.files.list({
-    q,
-    fields: 'files(id, name)',
-    pageSize: 1,
-    spaces: 'drive',
-  });
-  const file = result.data.files?.[0];
-  return file?.id ?? null;
+  return (await findAcumenFolders(drive))[0]?.id ?? null;
 }
 
 /**
@@ -50,17 +65,39 @@ export async function ensureAcumenFolder(drive: drive_v3.Drive): Promise<string>
 }
 
 /**
+ * Ensure at least one ACUMEN folder exists, then return all root-level ACUMEN
+ * folders visible to the app. Listing across all visible root ACUMEN folders
+ * avoids the stale-cookie/duplicate-folder trap after upgrading from drive.file
+ * to full Drive scope during a demo.
+ */
+export async function ensureAcumenFolders(drive: drive_v3.Drive): Promise<AcumenFolder[]> {
+  const existing = await findAcumenFolders(drive);
+  if (existing.length > 0) return existing;
+  const id = await ensureAcumenFolder(drive);
+  return [{ id, name: ACUMEN_FOLDER_NAME }];
+}
+
+export function buildAcumenParentsClause(folderIds: string[]): string {
+  const ids = [...new Set(folderIds)].filter(Boolean);
+  if (ids.length === 0) throw new Error('No ACUMEN folder ids available');
+  const parentChecks = ids.map((id) => `'${escapeDriveQueryValue(id)}' in parents`);
+  const parentClause = parentChecks.length === 1 ? parentChecks[0] : `(${parentChecks.join(' or ')})`;
+  return `${parentClause} and trashed = false`;
+}
+
+/**
  * Throws a 403-style error if the given file is not parented under the
  * ACUMEN folder. Reads only the `parents` field for efficiency.
  */
 export async function assertFileInAcumen(
   drive: drive_v3.Drive,
   fileId: string,
-  acumenFolderId: string,
+  acumenFolderId: string | string[],
 ): Promise<void> {
   const result = await drive.files.get({ fileId, fields: 'id, parents' });
   const parents = result.data.parents ?? [];
-  if (!parents.includes(acumenFolderId)) {
+  const allowedFolderIds = Array.isArray(acumenFolderId) ? acumenFolderId : [acumenFolderId];
+  if (!allowedFolderIds.some((id) => parents.includes(id))) {
     const err = new Error('File is not inside the ACUMEN folder') as Error & {
       status: number;
     };

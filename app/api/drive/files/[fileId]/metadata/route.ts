@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getDriveClient, getOrCreateAcumenFolderId } from '@/lib/google';
-import { DEFAULT_FILE_FIELDS, assertFileInAcumen } from '@/lib/drive';
+import { getDriveClient } from '@/lib/google';
+import { DEFAULT_FILE_FIELDS, assertFileInAcumen, ensureAcumenFolders } from '@/lib/drive';
 import { errorResponse } from '@/lib/http';
 
 export const runtime = 'nodejs';
@@ -35,8 +35,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     }
 
     const drive = await getDriveClient();
-    const acumenFolderId = await getOrCreateAcumenFolderId();
-    await assertFileInAcumen(drive, fileId, acumenFolderId);
+    const acumenFolderIds = (await ensureAcumenFolders(drive)).map((folder) => folder.id);
+    await assertFileInAcumen(drive, fileId, acumenFolderIds);
     const result = await drive.files.update({
       fileId,
       requestBody,

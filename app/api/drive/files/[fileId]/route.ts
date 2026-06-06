@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { Readable } from 'node:stream';
-import { getDriveClient, getOrCreateAcumenFolderId } from '@/lib/google';
-import { DEFAULT_FILE_FIELDS, assertFileInAcumen, nonEmpty } from '@/lib/drive';
+import { getDriveClient } from '@/lib/google';
+import { DEFAULT_FILE_FIELDS, assertFileInAcumen, ensureAcumenFolders, nonEmpty } from '@/lib/drive';
 import { errorResponse } from '@/lib/http';
 
 export const runtime = 'nodejs';
@@ -12,8 +12,8 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
   try {
     const { fileId } = await ctx.params;
     const drive = await getDriveClient();
-    const acumenFolderId = await getOrCreateAcumenFolderId();
-    await assertFileInAcumen(drive, fileId, acumenFolderId);
+    const acumenFolderIds = (await ensureAcumenFolders(drive)).map((folder) => folder.id);
+    await assertFileInAcumen(drive, fileId, acumenFolderIds);
     const result = await drive.files.get({
       fileId,
       fields: DEFAULT_FILE_FIELDS,
@@ -36,8 +36,8 @@ export async function PUT(req: NextRequest, ctx: RouteContext) {
       );
     }
     const drive = await getDriveClient();
-    const acumenFolderId = await getOrCreateAcumenFolderId();
-    await assertFileInAcumen(drive, fileId, acumenFolderId);
+    const acumenFolderIds = (await ensureAcumenFolders(drive)).map((folder) => folder.id);
+    await assertFileInAcumen(drive, fileId, acumenFolderIds);
     const name = nonEmpty(form.get('name')?.toString() ?? null);
     const mimeType = file.type || 'application/octet-stream';
 

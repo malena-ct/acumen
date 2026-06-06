@@ -106,9 +106,10 @@ export async function getOrCreateAcumenFolderId(): Promise<string> {
   if (!state || (!state.creds.access_token && !state.creds.refresh_token)) {
     throw new AuthRequiredError();
   }
-  if (state.acumenFolderId) return state.acumenFolderId;
   const drive = await getDriveClient();
   const folderId = await ensureAcumenFolder(drive);
-  await writeSessionState({ ...state, acumenFolderId: folderId });
+  if (state.acumenFolderId !== folderId) {
+    await writeSessionState({ ...state, acumenFolderId: folderId });
+  }
   return folderId;
 }

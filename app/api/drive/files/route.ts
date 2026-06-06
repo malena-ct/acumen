@@ -3,7 +3,8 @@ import { Readable } from 'node:stream';
 import { getDriveClient, getOrCreateAcumenFolderId } from '@/lib/google';
 import {
   DEFAULT_FILE_FIELDS,
-  escapeDriveQueryValue,
+  buildAcumenParentsClause,
+  ensureAcumenFolders,
   nonEmpty,
   parsePageSize,
 } from '@/lib/drive';
@@ -14,13 +15,13 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   try {
     const drive = await getDriveClient();
-    const acumenFolderId = await getOrCreateAcumenFolderId();
+    const acumenFolders = await ensureAcumenFolders(drive);
     const { searchParams } = req.nextUrl;
     const query = nonEmpty(searchParams.get('query'));
     const pageToken = nonEmpty(searchParams.get('pageToken'));
     const pageSize = parsePageSize(searchParams.get('pageSize'));
 
-    const parentClause = `'${escapeDriveQueryValue(acumenFolderId)}' in parents and trashed = false`;
+    const parentClause = buildAcumenParentsClause(acumenFolders.map((folder) => folder.id));
     const q = query ? `(${query}) and ${parentClause}` : parentClause;
 
     const result = await drive.files.list({

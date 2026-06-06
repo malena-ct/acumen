@@ -1412,6 +1412,8 @@ button.demo-toggle:hover:not(:disabled) {
     grid-template-columns: 1fr 1fr;
     align-items: start;
   }
+}
+
 .success {
   color: #059669;
   font-weight: 700;

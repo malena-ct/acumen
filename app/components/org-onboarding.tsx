@@ -1,9 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface OrgOnboardingProps {
   onFinish: () => void;
+  /** Whether the org admin is authenticated. Invite codes are only generated when true. */
+  isAdminLoggedIn?: boolean;
+}
+
+// Minutes a join code stays valid before it must be regenerated.
+const CODE_TTL_MINUTES = 30;
+const INVITE_BASE_URL = 'https://acumen.app/unirse';
+
+// UI only: generate a short, ONG-scoped code that goes in the invite link param.
+function generateOrgCode() {
+  const random = Math.random().toString(36).slice(2, 8);
+  return `org-${random}`;
+}
+
+function formatRemaining(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 type Phase = 'details' | 'drive' | 'success';
@@ -17,14 +36,43 @@ const MOCK_FOLDERS = [
 
 const INVITE_LINK = 'https://acumen.app/unirse/org-9f3a2c';
 
-export default function OrgOnboarding({ onFinish }: OrgOnboardingProps) {
+export default function OrgOnboarding({ onFinish, isAdminLoggedIn = true }: OrgOnboardingProps) {
   const [phase, setPhase] = useState<Phase>('details');
   const [orgName, setOrgName] = useState('');
   const [integrate, setIntegrate] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Invite code state. Each code is scoped to the ONG and expires after CODE_TTL_MINUTES.
+  const [orgCode, setOrgCode] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
   const stepNumber = phase === 'details' ? 2 : 3;
+
+  const inviteLink = orgCode ? `${INVITE_BASE_URL}?ong=${orgCode}` : '';
+  const remainingMs = expiresAt ? expiresAt - now : 0;
+  const isExpired = expiresAt !== null && remainingMs <= 0;
+
+  const regenerateCode = useCallback(() => {
+    setOrgCode(generateOrgCode());
+    setExpiresAt(Date.now() + CODE_TTL_MINUTES * 60 * 1000);
+    setCopied(false);
+  }, []);
+
+  // Generate the first code when the admin reaches the success screen (only if logged in).
+  useEffect(() => {
+    if (phase === 'success' && isAdminLoggedIn && !orgCode) {
+      regenerateCode();
+    }
+  }, [phase, isAdminLoggedIn, orgCode, regenerateCode]);
+
+  // Tick every second to keep the countdown live.
+  useEffect(() => {
+    if (phase !== 'success' || !expiresAt) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [phase, expiresAt]);
 
   function handleDetailsSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,8 +90,9 @@ export default function OrgOnboarding({ onFinish }: OrgOnboardingProps) {
   }
 
   async function handleCopy() {
+    if (!inviteLink || isExpired) return;
     try {
-      await navigator.clipboard.writeText(INVITE_LINK);
+      await navigator.clipboard.writeText(inviteLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -186,21 +235,63 @@ export default function OrgOnboarding({ onFinish }: OrgOnboardingProps) {
               </p>
             </div>
 
-            <div className="invite-box">
-              <span className="invite-label">Enlace de invitación</span>
-              <div className="invite-row">
-                <span className="invite-link" title={INVITE_LINK}>
-                  {INVITE_LINK}
-                </span>
-                <button type="button" className="secondary" onClick={handleCopy}>
-                  {copied ? 'Copiado' : 'Copiar'}
-                </button>
+            {!isAdminLoggedIn ? (
+              <div className="invite-box">
+                <span className="invite-label">Enlace de invitación</span>
+                <p className="muted invite-help">
+                  Inicia sesión como administrador de la organización para generar el enlace de
+                  invitación de tu equipo.
+                </p>
               </div>
-              <p className="muted invite-help">
-                Comparte este enlace con las personas de tu organización para que se registren y
-                formen parte de tu equipo.
-              </p>
-            </div>
+            ) : (
+              <div className="invite-box">
+                <div className="invite-head">
+                  <span className="invite-label">Enlace de invitación</span>
+                  {!isExpired ? (
+                    <span className="invite-timer" data-soon={remainingMs < 5 * 60 * 1000}>
+                      <ClockGlyph />
+                      Expira en {formatRemaining(remainingMs)}
+                    </span>
+                  ) : (
+                    <span className="invite-timer expired">
+                      <ClockGlyph />
+                      Enlace expirado
+                    </span>
+                  )}
+                </div>
+
+                {!isExpired ? (
+                  <>
+                    <div className="invite-row">
+                      <span className="invite-link" title={inviteLink}>
+                        {inviteLink}
+                      </span>
+                      <button type="button" className="secondary" onClick={handleCopy}>
+                        {copied ? 'Copiado' : 'Copiar'}
+                      </button>
+                    </div>
+                    <p className="muted invite-help">
+                      Comparte este enlace con las personas de tu organización para que se registren
+                      y formen parte de tu equipo. Por seguridad, caduca a los {CODE_TTL_MINUTES}{' '}
+                      minutos.
+                    </p>
+                    <button type="button" className="link-button" onClick={regenerateCode}>
+                      Generar un enlace nuevo
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="muted invite-help">
+                      Este enlace caducó por seguridad. Genera uno nuevo para seguir invitando a tu
+                      equipo.
+                    </p>
+                    <button type="button" className="block" onClick={regenerateCode}>
+                      Generar enlace nuevo
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
 
             <button type="button" className="block" onClick={onFinish}>
               Continuar a la configuración de WhatsApp
@@ -245,6 +336,21 @@ function CheckGlyph({ large }: { large?: boolean }) {
         d="M5 13l4 4L19 7"
         stroke="currentColor"
         strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ClockGlyph() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M12 7v5l3 2"
+        stroke="currentColor"
+        strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

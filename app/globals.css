@@ -1113,6 +1113,236 @@ button.demo-toggle:hover:not(:disabled) {
   justify-content: center;
 }
 
+.stat-delta {
+  font-size: 12px;
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+/* Section blocks */
+
+.dash-block {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 8px 16px;
+}
+
+.head-with-tag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-section-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* Data sensitivity tags */
+
+.data-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.data-tag.shareable {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-color: var(--accent-soft);
+}
+
+.data-tag.private {
+  background: #fbeaea;
+  color: var(--danger);
+  border-color: #f3d4d4;
+}
+
+/* Program progress */
+
+.program-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.program {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.program-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.program-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.program-count {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.program-count .muted {
+  font-weight: 400;
+}
+
+.progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progress-bar {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 240ms ease;
+}
+
+.progress-bar.complete {
+  background: var(--accent-strong);
+}
+
+.program-pct {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Two column layout */
+
+.dash-two-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+
+/* Beneficiary list */
+
+.bene-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bene {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 8px;
+  border-radius: 12px;
+}
+
+.bene:hover {
+  background: var(--bg);
+}
+
+.dash-block .block {
+  margin: 12px 16px 0;
+  width: calc(100% - 32px);
+}
+
+/* Qualitative evidence */
+
+.evidence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.evidence blockquote {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--fg);
+}
+
+.evidence cite {
+  font-size: 13px;
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* Continuity banner */
+
+.continuity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.continuity .action-text {
+  flex: 1;
+}
+
+/* Head actions + hint */
+
+.dash-head-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-hint {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.dash-hint .action-text {
+  flex: 1;
+}
+
+.action-icon.small {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+}
+
 @media (min-width: 720px) {
   .action-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -1120,5 +1350,16 @@ button.demo-toggle:hover:not(:disabled) {
 
   .stat-grid {
     grid-template-columns: repeat(4, 1fr);
+  }
+
+  .dash-section-head {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .dash-two-col {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
   }
 }

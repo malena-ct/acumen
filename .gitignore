@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+dist/
+.env
+.env.local
+.env.*.local
+google-token.json
+*.log
+.DS_Store
+coverage/
+cs.json
+next-env.d.ts
+.vercel

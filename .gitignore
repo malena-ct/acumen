@@ -12,3 +12,4 @@ coverage/
 cs.json
 next-env.d.ts
 .vercel
+*.tsbuildinfo
